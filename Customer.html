@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#0f172a" />
+<title>SYEDGO</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLf8FDyUoWTFsiMu20azhnscWkiyCDE24&libraries=places"></script>
+<style>
+:root { --primary: #0f172a; --accent: #f59e0b; --success: #22c55e; --danger: #ef4444; --bg: #f1f5f9; --card: #ffffff; --text: #0f172a; --text-light: #64748b; --border: #e2e8f0; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); display: flex; justify-content: center; min-height: 100vh; }
+.app { width: 100%; max-width: 480px; background: var(--bg); min-height: 100vh; position: relative; padding-bottom: 75px; overflow-x: hidden; }
+#splash { position: fixed; inset: 0; background: var(--primary); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.5s; }
+#splash h1 { font-size: 36px; letter-spacing: 3px; margin-bottom: 10px; }
+#splash p { color: #94a3b8; font-size: 14px; }
+#splash .loader { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; margin-top: 20px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.topbar { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--primary); color: #fff; position: sticky; top: 0; z-index: 10; }
+.topbar .loc { font-size: 12px; opacity: 0.85; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.topbar h1 { font-size: 20px; letter-spacing: 1px; }
+.icon-btn { background: rgba(255,255,255,0.12); border: none; color: #fff; font-size: 18px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+main { padding: 16px; }
+h2 { font-size: 18px; margin-bottom: 12px; color: var(--text); font-weight: 600; }
+h3 { font-size: 16px; color: var(--text); }
+p { font-size: 13px; color: var(--text-light); }
+.card { background: var(--card); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative; overflow: hidden; border: 1px solid rgba(0,0,0,0.02); }
+.shop-header { display: flex; gap: 12px; align-items: center; cursor: pointer; }
+.shop-img { width: 60px; height: 60px; border-radius: 14px; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0; border: 1px solid var(--border); }
+.shop-info h3 { font-size: 15px; color: var(--text); margin-bottom: 2px; }
+.shop-info p { font-size: 12px; color: var(--text-light); }
+.product-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.product-row:last-child { border-bottom: none; }
+.product-info { flex: 1; cursor: pointer; }
+.product-info h4 { font-size: 14px; color: var(--text); font-weight: 500; }
+.product-info p { font-size: 13px; color: var(--text-light); margin-top: 4px; font-weight: 600; }
+.add-btn { background: var(--primary); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600; cursor: pointer; transition: transform 0.1s; }
+.add-btn:active { transform: scale(0.95); }
+.qty-box { display: flex; align-items: center; gap: 10px; }
+.qty-box button { background: var(--primary); color: #fff; border: none; border-radius: 8px; width: 30px; height: 30px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.qty-box span { font-size: 14px; font-weight: bold; min-width: 20px; text-align: center; }
+.bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 480px; display: flex; justify-content: space-around; background: #fff; border-top: 1px solid var(--border); padding: 10px 0; z-index: 100; }
+.bottom-nav button { background: none; border: none; display: flex; flex-direction: column; align-items: center; font-size: 20px; color: #94a3b8; cursor: pointer; position: relative; flex: 1; padding: 4px; transition: color 0.2s; }
+.bottom-nav button span.lbl { font-size: 10px; margin-top: 4px; font-weight: 500; }
+.bottom-nav button.active { color: var(--primary); font-weight: 700; }
+.badge { position: absolute; top: -2px; right: 22%; background: var(--danger); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; border: 2px solid #fff; }
+.hidden { display: none !important; }
+.categories { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 8px; scrollbar-width: none; }
+.categories::-webkit-scrollbar { display: none; }
+.cat { flex-shrink: 0; background: #fff; border-radius: 14px; padding: 12px 16px; font-size: 12px; text-align: center; cursor: pointer; border: 2px solid transparent; min-width: 80px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); transition: all 0.2s; }
+.cat.active { border-color: var(--primary); background: #f8fafc; }
+.cat .em { font-size: 24px; display: block; margin-bottom: 6px; }
+.featured-tag { position: absolute; top: 0; right: 0; background: var(--accent); color: #fff; font-size: 10px; font-weight: bold; padding: 4px 10px; border-radius: 0 16px 0 10px; }
+.new-tag { background: var(--success); }
+.search-input { width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px; font-size: 14px; margin-bottom: 14px; outline: none; background: #fff; }
+.search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15,23,42,0.1); }
+.filter-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 8px; scrollbar-width: none; }
+.filter-chip { flex-shrink: 0; background: #fff; border: 1px solid var(--border); border-radius: 20px; padding: 6px 14px; font-size: 12px; cursor: pointer; color: var(--text-light); }
+.filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end; justify-content: center; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.sheet { background: #fff; width: 100%; max-width: 480px; border-radius: 24px 24px 0 0; padding: 24px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.3s ease-out; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.sheet h3 { margin-bottom: 16px; font-size: 20px; }
+.sheet input, .sheet select, .sheet textarea { width: 100%; padding: 14px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; font-size: 14px; outline: none; font-family: inherit; }
+.sheet input:focus, .sheet textarea:focus { border-color: var(--primary); }
+.pay-opt { display: flex; align-items: center; gap: 12px; padding: 14px; border: 2px solid var(--border); border-radius: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+.pay-opt.active { border-color: var(--primary); background: #f8fafc; }
+.pay-opt input { width: auto; margin: 0; }
+.pay-opt .pay-icon { font-size: 24px; }
+.fee-breakdown { background: #f8fafc; border-radius: 14px; padding: 16px; margin-top: 16px; font-size: 14px; border: 1px solid var(--border); }
+.fee-row { display: flex; justify-content: space-between; margin-bottom: 8px; color: var(--text-light); }
+.fee-row.total { font-weight: 700; color: var(--text); font-size: 16px; border-top: 2px dashed var(--border); padding-top: 12px; margin-top: 12px; }
+.timeline { position: relative; padding-left: 30px; margin-top: 16px; }
+.timeline::before { content: ''; position: absolute; left: 9px; top: 5px; bottom: 5px; width: 2px; background: var(--border); }
+.timeline-step { position: relative; margin-bottom: 24px; }
+.timeline-step:last-child { margin-bottom: 0; }
+.timeline-step::before { content: ''; position: absolute; left: -26px; top: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--border); border: 2px solid #fff; }
+.timeline-step.done::before { background: var(--success); }
+.timeline-step.active::before { background: var(--accent); animation: pulse 1.5s infinite; }
+.timeline-step.cancelled::before { background: var(--danger); }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.4); } 70% { box-shadow: 0 0 0 10px rgba(245,158,11,0); } 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0); } }
+.timeline-step h4 { font-size: 14px; color: var(--text); font-weight: 600; }
+.timeline-step p { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+#liveTrackingMap { width: 100%; height: 320px; border-radius: 16px; margin-bottom: 16px; border: 1px solid var(--border); background: #e2e8f0; }
+.chat-box { height: 300px; overflow-y: auto; background: #f8fafc; border-radius: 14px; padding: 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border); }
+.chat-msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.4; }
+.chat-msg.me { background: var(--primary); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+.chat-msg.other { background: #fff; color: var(--text); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border); }
+.chat-input { display: flex; gap: 8px; }
+.chat-input input { flex: 1; margin-bottom: 0; }
+.chat-input button { background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: 0 20px; font-weight: bold; cursor: pointer; }
+.stars { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
+.star { font-size: 32px; cursor: pointer; color: #cbd5e1; transition: color 0.2s; }
+.star.active { color: var(--accent); }
+.toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
+.empty { text-align: center; color: var(--text-light); padding: 60px 0; font-size: 14px; }
+.empty .big { font-size: 56px; display: block; margin-bottom: 16px; }
+.status-chip { font-size: 11px; padding: 4px 10px; border-radius: 20px; background: #dcfce7; color: #166534; font-weight: 600; }
+.status-chip.pending { background: #fef3c7; color: #92400e; }
+.status-chip.delivered { background: #dcfce7; color: #166534; }
+.status-chip.assigned { background: #dbeafe; color: #1e40af; }
+.status-chip.cancelled { background: #fee2e2; color: #991b1b; }
+.status-chip.ready { background: #fef3c7; color: #92400e; }
+.checkout-btn { width: 100%; background: var(--success); color: #fff; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; margin-top: 16px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="splash"><h1>SYEDGO</h1><p>Delivering happiness to Swat</p><div class="loader"></div></div>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <div class="loc" onclick="openLocationModal()">📍 <span id="locLabel">Swat, Pakistan</span></div>
+      <h1>SYEDGO</h1>
+    </div>
+    <button class="icon-btn" onclick="toast('No new notifications')">🔔</button>
+  </header>
+  <main id="app"></main>
+  <nav class="bottom-nav">
+    <button data-tab="home" class="active">🏠<span class="lbl">Home</span></button>
+    <button data-tab="search">🔍<span class="lbl">Search</span></button>
+    <button data-tab="cart">🛒<span class="lbl">Cart</span><span id="cartBadge" class="badge hidden">0</span></button>
+    <button data-tab="orders">📦<span class="lbl">Orders</span></button>
+    <button data-tab="profile">👤<span class="lbl">Profile</span></button>
+  </nav>
+</div>
+<div id="toast" class="toast"></div>
+<div id="modalRoot"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
+  import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = { apiKey: "AIzaSyDGykbkZ4ITxkEgcxaQNZlH9rFO86c-xEU", authDomain: "syedgo-2027.firebaseapp.com", projectId: "syedgo-2027", storageBucket: "syedgo-2027.firebasestorage.app", messagingSenderId: "827702342584", appId: "1:827702342584:web:a3d717e8b1bcf93529954d", measurementId: "G-L0B1K6N1EY" };
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore(app);
+
+  const CONFIG = { PLATFORM_FEE: 30, DEFAULT_DELIVERY: 150, RIDER_CUT: 120, SYEDGO_MARGIN: 30 };
+  const DEFAULT_CENTER = { lat: 34.7717, lng: 72.3600 };
+
+  const DEMO_SHOPS = [
+    { id: 1, name: "Al-Madina Superstore", category: "Supermarket", rating: 4.5, time: "20-30 min", distance: "1.2 km", emoji: "🛒", featured: true, hours: "8:00 AM - 11:00 PM", banner: "linear-gradient(135deg, #10b981, #047857)", isDemo: true, products: [ { id: 101, name: "Milk 1L", price: 220, desc: "Fresh full cream milk", stock: true }, { id: 102, name: "Eggs (12)", price: 180, desc: "Farm fresh eggs", stock: true }, { id: 103, name: "Bread", price: 120, desc: "Whole wheat bread", stock: true } ] },
+    { id: 2, name: "KFC Swat", category: "Restaurant", rating: 4.2, time: "30-40 min", distance: "2.5 km", emoji: "🍗", featured: true, hours: "11:00 AM - 1:00 AM", banner: "linear-gradient(135deg, #ef4444, #b91c1c)", isDemo: true, products: [ { id: 201, name: "Zinger Burger", price: 550, desc: "Crispy chicken burger", stock: true }, { id: 202, name: "Chicken Pieces (4)", price: 700, desc: "Hot & crispy", stock: true }, { id: 203, name: "Fries Large", price: 250, desc: "Golden fries", stock: true } ] },
+    { id: 3, name: "Green Pharmacy", category: "Pharmacy", rating: 4.7, time: "15-25 min", distance: "0.8 km", emoji: "💊", featured: false, hours: "24 Hours", banner: "linear-gradient(135deg, #3b82f6, #1d4ed8)", isDemo: true, products: [ { id: 301, name: "Panadol (10)", price: 50, desc: "Pain relief", stock: true }, { id: 302, name: "Vitamin C", price: 300, desc: "Immunity booster", stock: true } ] }
+  ];
+
+  const CATEGORY_META = {
+    "Restaurant": { emoji: "🍔", banner: "linear-gradient(135deg, #ef4444, #b91c1c)" },
+    "Supermarket": { emoji: "🛒", banner: "linear-gradient(135deg, #10b981, #047857)" },
+    "Pharmacy": { emoji: "💊", banner: "linear-gradient(135deg, #3b82f6, #1d4ed8)" },
+    "Fruits & Veg": { emoji: "🍎", banner: "linear-gradient(135deg, #f59e0b, #d97706)" },
+    "Bakery": { emoji: "🥐", banner: "linear-gradient(135deg, #ec4899, #be185d)" },
+    "Other": { emoji: "🏪", banner: "linear-gradient(135deg, #64748b, #334155)" }
+  };
+
+  const CATEGORIES = [ { key: "all", label: "All", em: "🏪" }, { key: "Restaurant", label: "Food", em: "🍔" }, { key: "Supermarket", label: "Grocery", em: "🛒" }, { key: "Pharmacy", label: "Pharmacy", em: "💊" }, { key: "Fruits & Veg", label: "Fruits", em: "🍎" } ];
+  const COUPONS = { "SYED10": { type: "percent", value: 10, min: 500 }, "WELCOME50": { type: "flat", value: 50, min: 300 }, "FREESHIP": { type: "shipping", value: 0, min: 0 } };
+
+  let state = {
+    tab: "home", category: "all", searchQuery: "", searchFilter: "all", currentShop: null, currentProduct: null,
+    firebaseShops: [],
+    user: JSON.parse(localStorage.getItem("syedgo_user")) || null,
+    cart: JSON.parse(localStorage.getItem("syedgo_cart")) || [],
+    orders: JSON.parse(localStorage.getItem("syedgo_orders")) || [],
+    favorites: JSON.parse(localStorage.getItem("syedgo_fav")) || [],
+    address: JSON.parse(localStorage.getItem("syedgo_addr")) || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng },
+    coupon: JSON.parse(localStorage.getItem("syedgo_coupon")) || null,
+    location: localStorage.getItem("syedgo_loc") || "Swat, Pakistan"
+  };
+
+  let liveMap = null, liveRiderMarker = null, liveCustomerMarker = null;
+  let riderLocationListener = null, orderStatusListener = null;
+  let merchantsListener = null;
+
+  function phoneToShopId(phone) {
+    let hash = 0; const str = String(phone || "");
+    for (let i = 0; i < str.length; i++) { hash = ((hash << 5) - hash) + str.charCodeAt(i); hash = hash & hash; }
+    return Math.abs(hash) % 100000000;
+  }
+
+  function merchantToShop(docId, data) {
+    const m = data.merchant || data;
+    const meta = CATEGORY_META[m.category] || CATEGORY_META["Other"];
+    const products = (data.products || []).map(p => ({ id: p.id, name: p.name, price: p.price, desc: p.desc || "", stock: p.stock !== false, category: p.category || "General" }));
+    return { id: phoneToShopId(m.phone || docId), name: m.storeName || "Store", category: m.category || "Other", rating: 5.0, time: "20-30 min", distance: "Nearby", emoji: meta.emoji, banner: meta.banner, featured: true, isNew: true, isDemo: false, hours: m.hours || "Open", address: m.address || "", deliveryArea: m.deliveryArea || "", merchantPhone: m.phone || docId, products };
+  }
+
+  function getAllShops() { return [...state.firebaseShops, ...DEMO_SHOPS]; }
+  function findShopById(id) { return getAllShops().find(s => String(s.id) === String(id)); }
+
+  function loadMerchants() {
+    if (merchantsListener) merchantsListener();
+    const merchantsRef = collection(db, "merchants");
+    merchantsListener = onSnapshot(merchantsRef, (snapshot) => {
+      const shops = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data.merchant || data.storeName) shops.push(merchantToShop(docSnap.id, data));
+      });
+      state.firebaseShops = shops;
+      console.log("🏪 Loaded", shops.length, "live merchants");
+      if (state.tab === "home" || state.tab === "search" || state.currentShop) render();
+    }, (err) => { console.error("Merchants listener error:", err); });
+  }
+
+  async function saveToFirebase() {
+    if (!state.user || !state.user.phone) return;
+    try { await setDoc(doc(db, "users", state.user.phone), { user: state.user, cart: state.cart, orders: state.orders, address: state.address, favorites: state.favorites, location: state.location, updatedAt: new Date().toISOString() }, { merge: true }); } catch (e) { console.error(e); }
+  }
+
+  function saveLocal() {
+    localStorage.setItem("syedgo_user", JSON.stringify(state.user));
+    localStorage.setItem("syedgo_cart", JSON.stringify(state.cart));
+    localStorage.setItem("syedgo_orders", JSON.stringify(state.orders));
+    localStorage.setItem("syedgo_fav", JSON.stringify(state.favorites));
+    localStorage.setItem("syedgo_addr", JSON.stringify(state.address));
+    localStorage.setItem("syedgo_coupon", JSON.stringify(state.coupon));
+    localStorage.setItem("syedgo_loc", state.location);
+  }
+  function save() { saveLocal(); saveToFirebase(); }
+
+  function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(window._t); window._t = setTimeout(() => t.classList.remove("show"), 2200); }
+  function closeModal() { document.getElementById("modalRoot").innerHTML = ""; }
+  function findProduct(id) { for (const s of getAllShops()) { const p = s.products.find(x => String(x.id) === String(id)); if (p) return { ...p, shopId: s.id, shopName: s.name }; } return null; }
+  function cartCount() { return state.cart.reduce((a, b) => a + b.qty, 0); }
+  function cartSubtotal() { return state.cart.reduce((a, b) => a + b.price * b.qty, 0); }
+  function deliveryFee() { return state.cart.length ? CONFIG.DEFAULT_DELIVERY : 0; }
+  function platformFee() { return state.cart.length ? CONFIG.PLATFORM_FEE : 0; }
+  function discountAmount() { if (!state.coupon) return 0; const c = COUPONS[state.coupon]; if (!c) return 0; const sub = cartSubtotal(); if (sub < c.min) return 0; if (c.type === "percent") return Math.round(sub * c.value / 100); if (c.type === "flat") return c.value; if (c.type === "shipping") return deliveryFee(); return 0; }
+  function cartTotal() { return Math.max(0, cartSubtotal() + deliveryFee() + platformFee() - discountAmount()); }
+  function updateBadge() { const b = document.getElementById("cartBadge"); const n = cartCount(); if (n > 0) { b.textContent = n; b.classList.remove("hidden"); } else b.classList.add("hidden"); }
+  function toggleFav(shopId, e) { if(e) e.stopPropagation(); const i = state.favorites.indexOf(shopId); if (i >= 0) { state.favorites.splice(i, 1); toast("Removed from favourites"); } else { state.favorites.push(shopId); toast("Added to favourites ❤️"); } save(); render(); }
+  function addToCart(pid, qty = 1) { const p = findProduct(pid); if (!p) return; const ex = state.cart.find(i => String(i.id) === String(pid)); if (ex) ex.qty += qty; else state.cart.push({ id: p.id, name: p.name, price: p.price, qty: qty, shopName: p.shopName }); save(); updateBadge(); render(); toast(p.name + " added"); }
+  function changeQty(id, delta) { const item = state.cart.find(i => String(i.id) === String(id)); if (!item) return; item.qty += delta; if (item.qty <= 0) state.cart = state.cart.filter(i => String(i.id) !== String(id)); save(); updateBadge(); render(); }
+  function setCategory(c) { state.category = c; render(); }
+  function openShop(id) { state.currentShop = id; render(); window.scrollTo(0,0); }
+  function backToHome() { state.currentShop = null; state.currentProduct = null; render(); }
+
+  function renderHome() {
+    const allShops = getAllShops();
+    const featured = allShops.filter(s => s.featured);
+    const list = allShops.filter(s => state.category === "all" || s.category === state.category);
+    let featuredHtml = "";
+    if (featured.length > 0 && state.category === "all") {
+      featuredHtml = `
+        <h2>Featured Stores ⭐</h2>
+        <div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none;">
+          ${featured.map(s => `
+            <div class="card" style="min-width:220px;flex-shrink:0;margin-bottom:0;cursor:pointer;" onclick="openShop(${s.id})">
+              <div class="featured-tag ${s.isNew ? 'new-tag' : ''}">${s.isNew ? 'NEW' : 'Featured'}</div>
+              <div class="shop-header" style="flex-direction:column;text-align:center;">
+                <div class="shop-img" style="margin-bottom:8px;">${s.emoji}</div>
+                <div class="shop-info"><h3>${s.name}</h3><p>⭐ ${s.rating} • ${s.time}</p></div>
+              </div>
+            </div>`).join("")}
+        </div>`;
+    }
+    return `
+      <div class="categories">${CATEGORIES.map(c => `<div class="cat ${state.category===c.key?'active':''}" onclick="setCategory('${c.key}')"><span class="em">${c.em}</span>${c.label}</div>`).join("")}</div>
+      ${featuredHtml}
+      <h2>All Shops (${list.length})</h2>
+      ${list.length === 0 ? '<div class="empty"><span class="big">🔎</span>No shops in this category yet</div>' : list.map(s => `
+        <div class="card">
+          <div class="featured-tag ${s.isNew ? 'new-tag' : ''}" style="display:${s.isNew ? 'block' : 'none'};">NEW</div>
+          <div class="shop-header" onclick="openShop(${s.id})">
+            <div class="shop-img">${s.emoji}</div>
+            <div class="shop-info" style="flex:1"><h3>${s.name}</h3><p>${s.category} • ⭐ ${s.rating} • ${s.time}</p></div>
+            <button class="fav-btn" onclick="toggleFav(${s.id}, event)" style="background:none;border:none;font-size:20px;cursor:pointer;">${state.favorites.includes(s.id)?'❤️':'🤍'}</button>
+          </div>
+          <div style="margin-top:12px">
+            ${s.products.length === 0 ? `<p style="font-size:12px;color:var(--text-light);text-align:center;padding:8px;">No products yet</p>` : s.products.slice(0,2).map(p => `
+              <div class="product-row">
+                <div class="product-info" onclick="openProduct(${p.id})"><h4>${p.name}</h4><p>Rs ${p.price}</p></div>
+                ${p.stock !== false ? `<button class="add-btn" onclick="addToCart(${p.id})">Add</button>` : ''}
+              </div>`).join("")}
+            ${s.products.length > 2 ? `<button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="openShop(${s.id})">View all ${s.products.length} items</button>` : ""}
+          </div>
+        </div>`).join("")}
+    `;
+  }
+
+  function renderShop() {
+    const s = findShopById(state.currentShop);
+    if (!s) return renderHome();
+    return `
+      <button class="add-btn" style="margin-bottom:12px;background:#f1f5f9;color:var(--text);border:1px solid var(--border)" onclick="backToHome()">← Back</button>
+      <div style="height:120px;border-radius:16px;background:${s.banner};margin-bottom:-40px;position:relative;z-index:1;"></div>
+      <div class="card" style="margin-top:-20px;position:relative;z-index:2;padding-top:50px;">
+        <div class="shop-header" style="position:absolute;top:-30px;left:16px;right:16px;"><div class="shop-img" style="width:70px;height:70px;font-size:32px;border:3px solid #fff;box-shadow:0 4px 10px rgba(0,0,0,0.1);">${s.emoji}</div></div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><h3>${s.name}</h3><p style="margin-top:4px;">${s.category} • ⭐ ${s.rating}</p><p style="margin-top:4px;font-size:12px;color:var(--accent);font-weight:600;">🕒 ${s.hours}</p>${s.address ? `<p style="margin-top:4px;font-size:12px;">📍 ${s.address}</p>` : ""}</div>
+          <button class="fav-btn" onclick="toggleFav(${s.id})" style="font-size:24px;">${state.favorites.includes(s.id)?'❤️':'🤍'}</button>
+        </div>
+      </div>
+      <h2 style="margin-top:16px;">Menu (${s.products.length})</h2>
+      ${s.products.length === 0 ? '<div class="empty"><span class="big">🍽️</span>No products added yet</div>' : s.products.map(p => `
+        <div class="card" onclick="openProduct(${p.id})" style="cursor:pointer;">
+          <div class="product-row">
+            <div class="product-info"><h4>${p.name} ${p.stock === false ? '<span style="color:red;font-size:10px;">(Out of stock)</span>' : ''}</h4><p style="font-weight:600;color:var(--primary);margin-top:4px;">Rs ${p.price}</p><p style="font-size:12px;color:var(--text-light);margin-top:4px;">${p.desc}</p></div>
+            ${p.stock !== false ? `<button class="add-btn" onclick="event.stopPropagation(); addToCart(${p.id})">Add +</button>` : ''}
+          </div>
+        </div>`).join("")}
+    `;
+  }
+
+  function openProduct(pid) {
+    const p = findProduct(pid); if (!p) return;
+    document.getElementById("modalRoot").innerHTML = `
+      <div class="overlay" onclick="if(event.target===this)closeModal()">
+        <div class="sheet">
+          <div style="height:180px;background:#f1f5f9;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:80px;margin-bottom:16px;">🍽️</div>
+          <h3>${p.name}</h3><p style="font-size:14px;color:var(--text-light);margin:8px 0 16px;">${p.desc}</p>
+          <div style="font-size:20px;font-weight:700;color:var(--primary);margin-bottom:16px;">Rs ${p.price}</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;"><span style="font-size:14px;font-weight:600;">Quantity:</span><div class="qty-box"><button onclick="let q=document.getElementById('prodQty'); if(q.value>1)q.value--;">−</button><input type="number" id="prodQty" value="1" min="1" style="width:50px;text-align:center;border:1px solid var(--border);border-radius:8px;padding:8px;font-weight:bold;" readonly><button onclick="document.getElementById('prodQty').value++;">+</button></div></div>
+          <button class="checkout-btn" style="background:var(--primary);" onclick="let q=parseInt(document.getElementById('prodQty').value); addToCart(${p.id}, q); closeModal();">Add to Cart - Rs ${p.price}</button>
+          <button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>`;
+  }
+
+  function renderSearchResults() {
+    const q = state.searchQuery.toLowerCase().trim();
+    if (!q) return "";
+    let res = [];
+    getAllShops().forEach(s => {
+      if (s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)) res.push({ type: "shop", data: s });
+      s.products.forEach(p => { if (p.name.toLowerCase().includes(q) || (p.desc || "").toLowerCase().includes(q)) res.push({ type: "product", data: { ...p, shop: s.name } }); });
+    });
+    if (state.searchFilter === "price_low") res.sort((a,b) => (a.type==='product'?a.data.price:0) - (b.type==='product'?b.data.price:0));
+    if (state.searchFilter === "price_high") res.sort((a,b) => (b.type==='product'?b.data.price:0) - (a.type==='product'?a.data.price:0));
+    if (!res.length) return '<div class="empty"><span class="big">😕</span>No results for "'+state.searchQuery+'"</div>';
+    return res.map(r => r.type === "shop"
+      ? `<div class="card" onclick="openShop(${r.data.id})"><div class="shop-header"><div class="shop-img">${r.data.emoji}</div><div class="shop-info"><h3>${r.data.name}</h3><p>${r.data.category} • ⭐ ${r.data.rating}</p></div></div></div>`
+      : `<div class="card"><div class="product-row"><div class="product-info" onclick="openProduct(${r.data.id})"><h4>${r.data.name}</h4><p>${r.data.shop} • Rs ${r.data.price}</p></div><button class="add-btn" onclick="addToCart(${r.data.id})">Add</button></div></div>`
+    ).join("");
+  }
+
+  function renderSearch() {
+    return `<h2>Search</h2><input id="searchInput" class="search-input" placeholder="Search shops or products..." value="${state.searchQuery}" oninput="state.searchQuery=this.value; document.getElementById('searchResults').innerHTML=renderSearchResults()" />
+      <div class="filter-chips"><div class="filter-chip ${state.searchFilter==='all'?'active':''}" onclick="state.searchFilter='all';render()">All</div><div class="filter-chip ${state.searchFilter==='price_low'?'active':''}" onclick="state.searchFilter='price_low';render()">💰 Price: Low</div><div class="filter-chip ${state.searchFilter==='price_high'?'active':''}" onclick="state.searchFilter='price_high';render()">💎 Price: High</div></div>
+      <div id="searchResults">${renderSearchResults()}</div>
+      ${!state.searchQuery ? `<div class="empty"><span class="big">🔍</span>Try "milk", "pizza", "KFC"</div>` : ""}`;
+  }
+
+  function renderCart() {
+    if (!state.cart.length) return '<div class="empty"><span class="big">🛒</span>Your cart is empty</div>';
+    const sub = cartSubtotal(), df = deliveryFee(), pf = platformFee(), disc = discountAmount(), total = cartTotal();
+    return `<h2>Your Cart</h2>
+      <div class="card">${state.cart.map(i => `<div class="cart-item" style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);"><div><h4 style="font-size:14px">${i.name}</h4><p style="font-size:12px;color:var(--text-light)">${i.shopName} • Rs ${i.price}</p></div><div class="qty-box"><button onclick="changeQty(${i.id},-1)">−</button><span>${i.qty}</span><button onclick="changeQty(${i.id},1)">+</button></div></div>`).join("")}</div>
+      <div class="card"><div class="fee-row"><span>Products Subtotal</span><span>Rs ${sub}</span></div><div class="fee-row"><span>Delivery Fee</span><span>Rs ${df}</span></div><div class="fee-row"><span>Platform Fee (Service)</span><span>Rs ${pf}</span></div>${disc>0?`<div class="fee-row" style="color:var(--success)"><span>Discount (${state.coupon})</span><span>-Rs ${disc}</span></div>`:""}<div class="fee-row total"><span>Total Payable</span><span>Rs ${total}</span></div></div>
+      <div class="card" style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:14px">🎟️ ${state.coupon ? "Coupon: <b>"+state.coupon+"</b>" : "Have a coupon?"}</div>${state.coupon ? `<button class="add-btn" style="background:var(--danger)" onclick="state.coupon=null;save();render()">Remove</button>` : `<button class="add-btn" onclick="applyCoupon()">Apply</button>`}</div>
+      <button class="checkout-btn" onclick="openCheckout()">Proceed to Checkout</button>`;
+  }
+
+  function openCheckout() {
+    if (state.cart.length === 0) return toast("Cart is empty");
+    if (!state.user) { toast("Please login first"); state.tab = "profile"; render(); return; }
+    const sub = cartSubtotal(), df = deliveryFee(), pf = platformFee(), disc = discountAmount(), total = cartTotal();
+    document.getElementById("modalRoot").innerHTML = `
+      <div class="overlay" onclick="if(event.target===this)closeModal()">
+        <div class="sheet">
+          <h3>Confirm Order</h3>
+          <div style="background:#f8fafc;border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid var(--border);cursor:pointer;" onclick="openLocationModal()"><div style="display:flex;justify-content:space-between;align-items:center;"><div><b>📍 ${state.address.label || 'Delivery Address'}</b><br><span style="font-size:13px;color:var(--text-light)">${state.address.details || 'Tap to set address'}</span></div><span style="font-size:20px;">›</span></div>${state.address.instructions ? `<p style="font-size:12px;color:var(--accent);margin-top:6px;">📝 ${state.address.instructions}</p>` : ""}</div>
+          <div style="font-size:14px;color:var(--text-light);margin-bottom:8px;">Delivery / Pickup</div>
+          <div class="pay-opt active" id="optDelivery"><input type="radio" name="mode" value="delivery" checked onchange="updateMode()" /><div><b>Delivery</b><div style="font-size:12px;color:var(--text-light)">To your address • Rs ${df}</div></div></div>
+          <div class="pay-opt" id="optPickup"><input type="radio" name="mode" value="pickup" onchange="updateMode()" /><div><b>Pickup</b><div style="font-size:12px;color:var(--text-light)">Collect yourself • Free</div></div></div>
+          <div style="font-size:14px;color:var(--text-light);margin:16px 0 8px;">Payment Method</div>
+          <div class="pay-opt active" id="payCOD"><input type="radio" name="pay" value="cod" checked onchange="updatePay()" /><div class="pay-icon">💵</div><div><b>Cash on Delivery</b></div></div>
+          <div class="pay-opt" id="payEasypaisa"><input type="radio" name="pay" value="easypaisa" onchange="updatePay()" /><div class="pay-icon">📱</div><div><b>Easypaisa</b></div></div>
+          <div class="pay-opt" id="payJazzCash"><input type="radio" name="pay" value="jazzcash" onchange="updatePay()" /><div class="pay-icon">💳</div><div><b>JazzCash</b></div></div>
+          <div class="fee-breakdown"><div class="fee-row"><span>Products Subtotal</span><span>Rs ${sub}</span></div><div class="fee-row"><span>Delivery Fee</span><span id="dfLabel">Rs ${df}</span></div><div class="fee-row"><span>Platform Fee (Service)</span><span>Rs ${pf}</span></div>${disc > 0 ? `<div class="fee-row" style="color:var(--success)"><span>Discount (${state.coupon})</span><span>-Rs ${disc}</span></div>` : ""}<div class="fee-row total"><span>Total Payable</span><span id="totalLabel">Rs ${total}</span></div></div>
+          <button class="checkout-btn" style="background:var(--success);margin-top:20px;" onclick="placeOrder()">Place Order</button>
+          <button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button>
+        </div>
+      </div>`;
+    window._mode = "delivery"; window._pay = "cod";
+  }
+
+  function updateMode() {
+    const m = document.querySelector('input[name="mode"]:checked').value; window._mode = m;
+    document.getElementById("optDelivery").classList.toggle("active", m === "delivery"); document.getElementById("optPickup").classList.toggle("active", m === "pickup");
+    const sub = cartSubtotal(), df = m === "delivery" ? deliveryFee() : 0, pf = platformFee(); let disc = discountAmount();
+    if (state.coupon === "FREESHIP" && m === "pickup") disc = 0;
+    document.getElementById("dfLabel").textContent = "Rs " + df;
+    document.getElementById("totalLabel").textContent = "Rs " + Math.max(0, sub + df + pf - disc);
+  }
+
+  function updatePay() {
+    const p = document.querySelector('input[name="pay"]:checked').value; window._pay = p;
+    ['payCOD','payEasypaisa','payJazzCash'].forEach(id => { const el = document.getElementById(id); el.classList.toggle("active", el.querySelector('input').value === p); });
+  }
+
+  async function placeOrder() {
+    const mode = window._mode, pay = window._pay;
+    const sub = cartSubtotal(), df = mode === "delivery" ? deliveryFee() : 0, pf = platformFee(), disc = discountAmount(), total = Math.max(0, sub + df + pf - disc);
+    const orderId = "SY" + Date.now().toString().slice(-6);
+    const order = { id: orderId, userId: state.user.phone, userName: state.user.name, userPhone: state.user.phone, items: [...state.cart], subtotal: sub, delivery: df, platformFee: pf, discount: disc, total: total, mode, pay, address: state.address, status: "Placed", createdAt: new Date().toISOString(), rider: null, riderEarning: 0, timeline: ["Placed"] };
+    state.orders.unshift(order); state.cart = []; state.coupon = null;
+    save(); updateBadge(); closeModal(); state.tab = "orders"; render();
+    toast("Order placed! #" + orderId);
+    try { await setDoc(doc(db, "orders", orderId), order); } catch (e) { console.error(e); toast("Cloud sync failed"); }
+  }
+
+  async function cancelOrder(orderId) {
+    const o = state.orders.find(x => x.id === orderId); if (!o) return;
+    if (["Rider Assigned", "Picked Up", "On the Way"].includes(o.status)) return toast("Rider already assigned.");
+    if (!confirm("Cancel this order?")) return;
+    try {
+      await updateDoc(doc(db, "orders", orderId), { status: "Cancelled", cancelledAt: new Date().toISOString(), cancelledBy: "Customer" });
+      o.status = "Cancelled"; o.timeline = [...(o.timeline || []), "Cancelled"];
+      saveLocal(); toast("Order cancelled ❌"); render();
+    } catch (e) { console.error(e); toast("Failed to cancel"); }
+  }
+
+  function openTracking(orderId) {
+    const o = state.orders.find(x => x.id === orderId); if (!o) return;
+    if (o.status === "Cancelled") return toast("Order was cancelled");
+    document.getElementById("modalRoot").innerHTML = `
+      <div class="overlay" onclick="if(event.target===this) closeTracking()">
+        <div class="sheet">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><h3 style="margin:0;">Track #${o.id}</h3><button class="add-btn" style="background:#f1f5f9;color:var(--text)" onclick="closeTracking()">✕</button></div>
+          <div id="liveTrackingMap"></div>
+          <div id="riderInfoBox"></div>
+          <div id="timelineBox"><div class="timeline">${["Placed", "Accepted by Store", "Ready for Pickup", "Rider Assigned", "Picked Up", "On the Way", "Delivered"].map((step, i) => {
+            const steps = ["Placed", "Accepted by Store", "Ready for Pickup", "Rider Assigned", "Picked Up", "On the Way", "Delivered"];
+            const currentIdx = steps.indexOf(o.status);
+            let cls = "timeline-step";
+            if (i < currentIdx) cls += " done";
+            else if (i === currentIdx) cls += " active";
+            return `<div class="${cls}"><h4>${step}</h4><p>${i <= currentIdx ? 'Completed' : 'Pending'}</p></div>`;
+          }).join("")}</div></div>
+        </div>
+      </div>`;
+    setTimeout(() => initLiveTrackingMap(o), 150);
+  }
+
+  function initLiveTrackingMap(order) {
+    const mapEl = document.getElementById("liveTrackingMap"); if (!mapEl) return;
+    const customerPos = order.address?.lat && order.address?.lng ? { lat: order.address.lat, lng: order.address.lng } : DEFAULT_CENTER;
+    liveMap = new google.maps.Map(mapEl, { center: customerPos, zoom: 14, disableDefaultUI: true, zoomControl: true, styles: [{ featureType: "poi", stylers: [{ visibility: "off" }] }] });
+    liveCustomerMarker = new google.maps.Marker({ position: customerPos, map: liveMap, title: "Your Address", icon: { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path fill="#0f172a" d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>`), scaledSize: new google.maps.Size(40, 40) } });
+
+    riderLocationListener = onSnapshot(doc(db, "rider_locations", order.id), (snap) => {
+      if (snap.exists() && snap.data().location) {
+        const riderPos = { lat: snap.data().location.latitude, lng: snap.data().location.longitude };
+        if (liveRiderMarker) smoothMoveMarker(liveRiderMarker, riderPos);
+        else liveRiderMarker = new google.maps.Marker({ position: riderPos, map: liveMap, title: "Rider", icon: { url: "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#22c55e" stroke="#fff" stroke-width="2"/><text x="12" y="16" text-anchor="middle" font-size="13">🛵</text></svg>`), scaledSize: new google.maps.Size(44, 44) } });
+        const bounds = new google.maps.LatLngBounds(); bounds.extend(customerPos); bounds.extend(riderPos);
+        liveMap.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
+      }
+    });
+
+    orderStatusListener = onSnapshot(doc(db, "orders", order.id), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        const localOrder = state.orders.find(x => x.id === order.id);
+        if (localOrder) { localOrder.status = data.status || localOrder.status; localOrder.rider = data.rider || localOrder.rider; saveLocal(); }
+        const riderBox = document.getElementById("riderInfoBox");
+        if (riderBox && data.rider) {
+          riderBox.innerHTML = `<div style="background:#f0fdf4;border-radius:14px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;"><div><b>${data.rider.name}</b><br><span style="font-size:12px;color:var(--text-light)">${data.rider.bike || 'Motorcycle'} • ⭐ ${data.rider.rating || 5.0}</span></div><div style="display:flex;gap:8px;"><button class="add-btn" style="background:var(--success)" onclick="toast('Calling ${data.rider.name}...')">📞 Call</button><button class="add-btn" style="background:var(--primary)" onclick="openChat('${order.id}')">💬 Chat</button></div></div>`;
+        }
+        const timelineBox = document.getElementById("timelineBox");
+        if (timelineBox) {
+          const steps = ["Placed", "Accepted by Store", "Ready for Pickup", "Rider Assigned", "Picked Up", "On the Way", "Delivered"];
+          const currentIdx = steps.indexOf(data.status);
+          const isCancelled = data.status === "Cancelled";
+          timelineBox.innerHTML = `<div class="timeline">${steps.map((step, i) => {
+            let cls = "timeline-step";
+            if (isCancelled) cls += " cancelled";
+            else if (i < currentIdx) cls += " done";
+            else if (i === currentIdx) cls += " active";
+            return `<div class="${cls}"><h4>${step}</h4><p>${isCancelled ? 'Cancelled' : (i <= currentIdx ? 'Completed' : 'Pending')}</p></div>`;
+          }).join("")}</div>`;
+        }
+      }
+    });
+  }
+
+  function smoothMoveMarker(marker, newPos) {
+    const oldPos = marker.getPosition(); if (!oldPos) { marker.setPosition(newPos); return; }
+    const steps = 20, latStep = (newPos.lat - oldPos.lat()) / steps, lngStep = (newPos.lng - oldPos.lng()) / steps; let i = 0;
+    const timer = setInterval(() => { i++; marker.setPosition({ lat: oldPos.lat() + latStep * i, lng: oldPos.lng() + lngStep * i }); if (i >= steps) clearInterval(timer); }, 30);
+  }
+
+  function closeTracking() {
+    if (riderLocationListener) { riderLocationListener(); riderLocationListener = null; }
+    if (orderStatusListener) { orderStatusListener(); orderStatusListener = null; }
+    liveMap = null; liveRiderMarker = null; liveCustomerMarker = null; closeModal();
+  }
+
+  function openChat(orderId) {
+    document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet" style="height:80vh;display:flex;flex-direction:column;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h3 style="margin:0;">Chat with Rider</h3><button class="add-btn" style="background:#f1f5f9;color:var(--text)" onclick="closeModal()">✕</button></div><div class="chat-box" id="chatBox"><div class="chat-msg other">Hello! I am on my way.</div></div><div class="chat-input"><input type="text" id="chatInput" placeholder="Type a message..." onkeypress="if(event.key==='Enter')sendChat()" /><button onclick="sendChat()">Send</button></div></div></div>`;
+  }
+  function sendChat() {
+    const inp = document.getElementById('chatInput'); const val = inp.value.trim(); if(!val) return;
+    const cb = document.getElementById('chatBox'); cb.innerHTML += `<div class="chat-msg me">${val}</div>`; inp.value = ''; cb.scrollTop = cb.scrollHeight;
+    setTimeout(() => { cb.innerHTML += `<div class="chat-msg other">Okay, noted!</div>`; cb.scrollTop = cb.scrollHeight; }, 1000);
+  }
+
+  function openRating(orderId) {
+    document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Rate your experience</h3><div style="text-align:center;margin-bottom:16px;"><b>Store Rating</b></div><div class="stars" id="storeStars">${[1,2,3,4,5].map(i => `<span class="star" onclick="setStar('store',${i})">★</span>`).join("")}</div><div style="text-align:center;margin-bottom:16px;"><b>Rider Rating</b></div><div class="stars" id="riderStars">${[1,2,3,4,5].map(i => `<span class="star" onclick="setStar('rider',${i})">★</span>`).join("")}</div><textarea placeholder="Write a review..." rows="3" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:16px;"></textarea><button class="checkout-btn" style="background:var(--accent);" onclick="submitRating()">Submit Rating</button></div></div>`;
+    window._storeRating = 0; window._riderRating = 0;
+  }
+  function setStar(type, val) {
+    if (type === 'store') { window._storeRating = val; document.querySelectorAll('#storeStars .star').forEach((s, i) => s.classList.toggle('active', i < val)); }
+    else { window._riderRating = val; document.querySelectorAll('#riderStars .star').forEach((s, i) => s.classList.toggle('active', i < val)); }
+  }
+  function submitRating() { if(!window._storeRating || !window._riderRating) return toast("Please rate both"); closeModal(); toast("Thanks for your feedback! ⭐"); }
+
+  let pickerMap = null, pickerMarker = null;
+  function openLocationModal() {
+    document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Delivery Address</h3><button class="add-btn" onclick="goToMyLocation()" style="width:100%;margin-bottom:12px;background:#dbeafe;color:#1e40af;padding:12px;font-size:13px;">📍 Use My Current Location</button><div id="pickerMap" style="width:100%;height:220px;border-radius:14px;margin-bottom:12px;background:#e2e8f0;"></div><p style="font-size:11px;text-align:center;color:var(--text-light);margin-bottom:14px;">Drag the pin 📍 or tap on map</p><div style="display:flex;gap:8px;margin-bottom:12px;"><div class="filter-chip ${state.address.label==='Home'?'active':''}" onclick="setAddressLabel('Home')">🏠 Home</div><div class="filter-chip ${state.address.label==='Office'?'active':''}" onclick="setAddressLabel('Office')">🏢 Office</div><div class="filter-chip ${state.address.label==='Other'?'active':''}" onclick="setAddressLabel('Other')">📍 Other</div></div><label style="font-size:12px;color:var(--text-light);margin-bottom:4px;display:block;">Full Address</label><input id="addrDetails" placeholder="House #, Street, Area..." value="${state.address.details || ''}" /><label style="font-size:12px;color:var(--text-light);margin-bottom:4px;display:block;">Delivery Instructions (optional)</label><input id="addrInstructions" placeholder="e.g. Call before arriving" value="${state.address.instructions || ''}" /><button class="checkout-btn" style="background:var(--primary);" onclick="saveAddress()">Save Address</button><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button></div></div>`;
+    setTimeout(() => initPickerMap(), 100);
+  }
+
+  function initPickerMap() {
+    const el = document.getElementById("pickerMap"); if (!el) return;
+    const startPos = state.address.lat && state.address.lng ? { lat: state.address.lat, lng: state.address.lng } : DEFAULT_CENTER;
+    pickerMap = new google.maps.Map(el, { center: startPos, zoom: 15, disableDefaultUI: true, zoomControl: true });
+    pickerMarker = new google.maps.Marker({ position: startPos, map: pickerMap, draggable: true, animation: google.maps.Animation.DROP });
+    google.maps.event.addListener(pickerMarker, 'dragend', () => { const pos = pickerMarker.getPosition(); state.address.lat = pos.lat(); state.address.lng = pos.lng(); reverseGeocode(pos.lat(), pos.lng()); });
+    pickerMap.addListener('click', (e) => { pickerMarker.setPosition(e.latLng); state.address.lat = e.latLng.lat(); state.address.lng = e.latLng.lng(); reverseGeocode(e.latLng.lat(), e.latLng.lng()); });
+  }
+
+  function reverseGeocode(lat, lng) {
+    const input = document.getElementById("addrDetails"); if (input) input.value = "Fetching address...";
+    new google.maps.Geocoder().geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results[0]) { if (input) input.value = results[0].formatted_address; }
+      else { if (input) input.value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+    });
+  }
+
+  function goToMyLocation() {
+    if (!navigator.geolocation) return toast("GPS not supported");
+    const isSecure = location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (!isSecure) { alert("⚠️ Location requires HTTPS or localhost."); return; }
+    toast("Getting your location...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { const lat = pos.coords.latitude, lng = pos.coords.longitude; state.address.lat = lat; state.address.lng = lng; if (pickerMap) { pickerMap.setCenter({ lat, lng }); pickerMap.setZoom(17); } if (pickerMarker) pickerMarker.setPosition({ lat, lng }); reverseGeocode(lat, lng); toast("Location set ✅"); },
+      (err) => { alert(err.code === 1 ? "🚫 Location permission blocked." : "Location error: " + err.message); },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  }
+
+  function setAddressLabel(label) { state.address.label = label; openLocationModal(); }
+  function saveAddress() {
+    const details = document.getElementById('addrDetails').value.trim();
+    const instructions = document.getElementById('addrInstructions').value.trim();
+    if (!details || details === "Fetching address...") return toast("Please set a valid address");
+    state.address.details = details; state.address.instructions = instructions;
+    save(); closeModal(); toast("Address saved ✅"); render();
+  }
+
+  function openAuth() {
+    document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Login to SYEDGO</h3><div id="authStep1"><p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Enter your phone number to continue.</p><input id="aPhone" placeholder="+92 300 1234567" type="tel" /><button class="checkout-btn" style="background:var(--primary);" onclick="checkAndLogin()">Continue</button><p style="font-size:11px;color:var(--text-light);margin-top:12px;text-align:center;">Existing users login instantly.</p></div><div id="authStep2" class="hidden"><p style="text-align:center;margin-bottom:16px;">👋 Welcome!<br>Tell us a bit about yourself.</p><input id="aName" placeholder="Full Name" /><input id="aEmail" placeholder="Email Address (optional)" type="email" /><button class="checkout-btn" style="background:var(--success);" onclick="completeSignup()">Create Account</button><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="backToStep1()">← Change Number</button></div><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button></div></div>`;
+    setTimeout(() => document.getElementById('aPhone')?.focus(), 100);
+  }
+
+  async function checkAndLogin() {
+    const input = document.getElementById('aPhone').value.trim(); if (!input) return toast("Enter phone number");
+    let phone = input.replace(/[\s\-()]/g, "");
+    if (phone.startsWith("0")) phone = "+92" + phone.slice(1);
+    else if (phone.startsWith("92") && !phone.startsWith("+")) phone = "+" + phone;
+    else if (!phone.startsWith("+")) phone = "+92" + phone;
+    window._phone = phone; toast("Checking...");
+    try {
+      const snap = await getDoc(doc(db, "users", phone));
+      if (snap.exists()) {
+        const data = snap.data();
+        state.user = data.user || { name: "SYEDGO User", phone };
+        state.cart = data.cart || []; state.orders = data.orders || [];
+        state.address = data.address || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng };
+        state.favorites = data.favorites || []; state.location = data.location || "Swat, Pakistan";
+        saveLocal(); closeModal(); render(); toast("Welcome back, " + state.user.name + "! 🎉");
+      } else {
+        document.getElementById('authStep1').classList.add('hidden');
+        document.getElementById('authStep2').classList.remove('hidden');
+        setTimeout(() => document.getElementById('aName')?.focus(), 100);
+      }
+    } catch (e) { console.error(e); toast("Network error"); }
+  }
+
+  function backToStep1() { document.getElementById('authStep2').classList.add('hidden'); document.getElementById('authStep1').classList.remove('hidden'); }
+
+  async function completeSignup() {
+    const name = document.getElementById('aName').value.trim(); const email = document.getElementById('aEmail').value.trim();
+    if (!name) return toast("Please enter your name");
+    state.user = { name, phone: window._phone, email, createdAt: new Date().toISOString() };
+    saveLocal(); await saveToFirebase(); closeModal(); render(); toast("Account created! Welcome, " + name + " 🎉");
+  }
+
+  function logout() {
+    if (!confirm("Logout?")) return;
+    state.user = null; state.cart = []; state.orders = []; state.favorites = [];
+    state.address = { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.coupon = null;
+    localStorage.clear(); state.tab = "home"; render(); toast("Logged out successfully");
+  }
+
+  function renderOrders() {
+    if (!state.orders.length) return '<div class="empty"><span class="big">📦</span>No orders yet</div>';
+    return `<h2>My Orders</h2>${state.orders.map(o => {
+      const canCancel = (o.status === "Placed" || o.status === "Accepted by Store" || o.status === "Ready for Pickup");
+      const isCancelled = o.status === "Cancelled" || o.status === "Rejected";
+      const isDelivered = o.status === "Delivered";
+      return `<div class="card" style="${isCancelled ? 'opacity:0.7;' : ''}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>#${o.id}</b><span class="status-chip ${o.status==='Placed'?'pending':''} ${isDelivered?'delivered':''} ${o.status==='Rider Assigned'?'assigned':''} ${isCancelled?'cancelled':''}">${o.status}</span></div>
+        <p style="font-size:12px;color:var(--text-light);margin-bottom:8px">${new Date(o.createdAt).toLocaleString()}</p>
+        ${o.items.map(i => `<div style="font-size:13px;display:flex;justify-content:space-between;padding:3px 0"><span>${i.name} × ${i.qty}</span><span>Rs ${i.price*i.qty}</span></div>`).join("")}
+        <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:13px;"><div style="display:flex;justify-content:space-between;font-weight:bold;color:var(--text);"><span>Total Paid</span><span>Rs ${o.total}</span></div></div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:8px">💳 ${o.pay.toUpperCase()} • ${o.mode==='delivery'?'Delivery':'Pickup'}</div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          ${!isCancelled ? `<button class="add-btn" style="flex:1;background:var(--primary);" onclick="openTracking('${o.id}')">📍 Track Live</button>` : ''}
+          ${!isCancelled && !isDelivered ? `<button class="add-btn" style="flex:1;background:var(--success);" onclick="openChat('${o.id}')">💬 Chat</button>` : ''}
+          ${isDelivered ? `<button class="add-btn" style="flex:1;background:var(--accent);" onclick="openRating('${o.id}')">⭐ Rate</button>` : ''}
+          <button class="add-btn" style="flex:1;background:#f1f5f9;color:var(--text);" onclick="reorder('${o.id}')">🔄 Reorder</button>
+        </div>
+        ${canCancel ? `<button class="add-btn" style="width:100%;margin-top:8px;background:var(--danger);color:#fff;padding:10px;" onclick="cancelOrder('${o.id}')">❌ Cancel Order</button>` : ''}
+      </div>`;
+    }).join("")}`;
+  }
+
+  function reorder(orderId) {
+    const o = state.orders.find(x => x.id === orderId); if(!o) return;
+    o.items.forEach(item => { const ex = state.cart.find(i => String(i.id) === String(item.id)); if(ex) ex.qty += item.qty; else state.cart.push({...item}); });
+    save(); updateBadge(); toast("Items added to cart!"); state.tab = "cart"; render();
+  }
+
+  function renderProfile() {
+    if (!state.user) return `<div class="card" style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">👤</div><h3 style="margin-bottom:8px;">Welcome to SYEDGO</h3><p style="color:var(--text-light);font-size:13px;margin-bottom:20px;">Login with your phone number</p><button class="checkout-btn" style="background:var(--primary);" onclick="openAuth()">Login / Signup</button></div>`;
+    return `<div class="card"><div style="display:flex;align-items:center;gap:16px"><div style="width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div><div><h3>${state.user.name}</h3><p style="font-size:13px;color:var(--text-light)">${state.user.phone} ${state.user.email ? '• ' + state.user.email : ''}</p></div></div></div>
+    <div class="card"><div style="display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;" onclick="openLocationModal()"><span>📍 Address</span><span style="color:var(--text-light);font-size:12px">${state.address.details ? state.address.details.slice(0,20)+'...' : 'Not set'}</span></div><div style="display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;" onclick="state.tab='orders';render()"><span>📦 My Orders</span><span>›</span></div><div style="display:flex;justify-content:space-between;padding:14px 0;font-size:14px;cursor:pointer;" onclick="toast('Support ticket created')"><span>🎧 Help & Support</span><span>›</span></div></div>
+    <button class="checkout-btn" style="background:var(--danger)" onclick="logout()">Logout</button>`;
+  }
+
+  function render() {
+    const app = document.getElementById("app"); let html = "";
+    if (state.currentShop) html = renderShop();
+    else if (state.tab === "home") html = renderHome();
+    else if (state.tab === "search") html = renderSearch();
+    else if (state.tab === "cart") html = renderCart();
+    else if (state.tab === "orders") html = renderOrders();
+    else if (state.tab === "profile") html = renderProfile();
+    app.innerHTML = html;
+    document.querySelectorAll(".bottom-nav button").forEach(b => { b.classList.toggle("active", b.dataset.tab === state.tab); });
+    updateBadge();
+  }
+
+  document.querySelectorAll(".bottom-nav button").forEach(btn => {
+    btn.addEventListener("click", () => { state.tab = btn.dataset.tab; state.currentShop = null; render(); window.scrollTo(0, 0); });
+  });
+
+  function applyCoupon() {
+    const code = prompt("Enter coupon:\nTry SYED10, WELCOME50, FREESHIP"); if (!code) return;
+    const c = code.trim().toUpperCase();
+    if (COUPONS[c]) { state.coupon = c; save(); render(); toast("Coupon applied: " + c); } else toast("Invalid coupon");
+  }
+
+  setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(() => document.getElementById('splash')?.remove(), 500); }, 2000);
+  document.getElementById("locLabel").textContent = state.location;
+  updateBadge(); render(); loadMerchants();
+
+  window.setCategory = setCategory; window.openShop = openShop; window.backToHome = backToHome;
+  window.addToCart = addToCart; window.changeQty = changeQty; window.toggleFav = toggleFav;
+  window.openProduct = openProduct; window.openCheckout = openCheckout; window.updateMode = updateMode;
+  window.updatePay = updatePay; window.placeOrder = placeOrder; window.openTracking = openTracking;
+  window.closeTracking = closeTracking; window.openChat = openChat; window.sendChat = sendChat;
+  window.openRating = openRating; window.setStar = setStar; window.submitRating = submitRating;
+  window.openLocationModal = openLocationModal; window.setAddressLabel = setAddressLabel;
+  window.saveAddress = saveAddress; window.openAuth = openAuth; window.checkAndLogin = checkAndLogin;
+  window.backToStep1 = backToStep1; window.completeSignup = completeSignup;
+  window.logout = logout; window.reorder = reorder; window.closeModal = closeModal;
+  window.toast = toast; window.applyCoupon = applyCoupon; window.cancelOrder = cancelOrder;
+  window.goToMyLocation = goToMyLocation;
+</script>
+</body>
+</html>
