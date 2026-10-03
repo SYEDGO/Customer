@@ -79,16 +79,6 @@ p { font-size: 13px; color: var(--text-light); }
 .timeline-step h4 { font-size: 14px; color: var(--text); font-weight: 600; }
 .timeline-step p { font-size: 12px; color: var(--text-light); margin-top: 2px; }
 #liveTrackingMap { width: 100%; height: 320px; border-radius: 16px; margin-bottom: 16px; border: 1px solid var(--border); background: #e2e8f0; }
-.chat-box { height: 300px; overflow-y: auto; background: #f8fafc; border-radius: 14px; padding: 14px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; border: 1px solid var(--border); }
-.chat-msg { max-width: 80%; padding: 10px 14px; border-radius: 14px; font-size: 13px; }
-.chat-msg.me { background: var(--primary); color: #fff; align-self: flex-end; }
-.chat-msg.other { background: #fff; color: var(--text); align-self: flex-start; border: 1px solid var(--border); }
-.chat-input { display: flex; gap: 8px; }
-.chat-input input { flex: 1; margin-bottom: 0; }
-.chat-input button { background: var(--primary); color: #fff; border: none; border-radius: 12px; padding: 0 20px; font-weight: bold; cursor: pointer; }
-.stars { display: flex; gap: 8px; justify-content: center; margin: 16px 0; }
-.star { font-size: 32px; cursor: pointer; color: #cbd5e1; }
-.star.active { color: var(--accent); }
 .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(-10px); }
 .empty { text-align: center; color: var(--text-light); padding: 60px 0; font-size: 14px; }
@@ -99,6 +89,16 @@ p { font-size: 13px; color: var(--text-light); }
 .status-chip.assigned { background: #dbeafe; color: #1e40af; }
 .status-chip.cancelled { background: #fee2e2; color: #991b1b; }
 .checkout-btn { width: 100%; background: var(--success); color: #fff; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; margin-top: 16px; cursor: pointer; }
+
+/* Rider contact row inside track view */
+.rider-contact-box { background: #f0fdf4; border-radius: 14px; padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.rider-contact-box .info { flex: 1; min-width: 0; }
+.rider-contact-box .info b { display: block; font-size: 14px; margin-bottom: 2px; }
+.rider-contact-box .info span { font-size: 12px; color: var(--text-light); }
+.rider-contact-box .actions { display: flex; gap: 8px; flex-shrink: 0; }
+.icon-action { width: 42px; height: 42px; border-radius: 50%; border: none; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
+.icon-action.call { background: #22c55e; }
+.icon-action.wa { background: #25D366; }
 </style>
 </head>
 <body>
@@ -198,7 +198,6 @@ p { font-size: 13px; color: var(--text-light); }
         if (data.merchant || data.storeName) shops.push(merchantToShop(docSnap.id, data));
       });
       state.firebaseShops = shops;
-      console.log("🏪 Loaded", shops.length, "live merchants");
       if (state.tab === "home" || state.tab === "search" || state.currentShop) render();
     }, (err) => { console.error("Merchants error:", err); });
   }
@@ -208,8 +207,6 @@ p { font-size: 13px; color: var(--text-light); }
     settingsListener = onSnapshot(doc(db, "settings", "global"), (snap) => {
       if (snap.exists()) {
         state.settings = { ...DEFAULT_SETTINGS, ...snap.data() };
-        console.log("⚙️ Settings loaded:", state.settings);
-        // Re-load merchants so featured status updates
         state.firebaseShops = state.firebaseShops.map(s => ({ ...s, featured: (state.settings.featuredMerchants || []).includes(s.merchantPhone) }));
         if (state.tab === "home") render();
       }
@@ -248,6 +245,44 @@ p { font-size: 13px; color: var(--text-light); }
   function setCategory(c) { state.category = c; render(); }
   function openShop(id) { state.currentShop = id; render(); window.scrollTo(0,0); }
   function backToHome() { state.currentShop = null; state.currentProduct = null; render(); }
+
+  /* ============================================================
+     📞 CONTACT RIDER — WhatsApp + Phone dialer
+     ============================================================ */
+
+  // Normalize phone: "+92 300 1234567" → "923001234567"
+  function normalizePhoneForLink(phone) {
+    if (!phone) return "";
+    return String(phone).replace(/[^0-9]/g, "");
+  }
+
+  // Open WhatsApp chat with rider
+  function openRiderWhatsApp(riderPhone, riderName) {
+    if (!riderPhone) return toast("Rider phone not available");
+    const cleaned = normalizePhoneForLink(riderPhone);
+    if (!cleaned) return toast("Invalid rider phone");
+    const msg = encodeURIComponent(`Assalam o Alaikum ${riderName || 'Rider'}, this is your customer from SYEDGO.`);
+    // wa.me works on both web and app
+    window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
+  }
+
+  // Open phone dialer with rider
+  function callRider(riderPhone) {
+    if (!riderPhone) return toast("Rider phone not available");
+    const cleaned = normalizePhoneForLink(riderPhone);
+    if (!cleaned) return toast("Invalid rider phone");
+    window.location.href = `tel:+${cleaned}`;
+  }
+
+  // Contact rider from Orders tab (only WhatsApp, since call goes in Track)
+  function contactRiderFromOrder(orderId) {
+    const o = state.orders.find(x => x.id === orderId);
+    if (!o) return;
+    if (!o.rider || !o.rider.phone) return toast("Rider not assigned yet");
+    openRiderWhatsApp(o.rider.phone, o.rider.name);
+  }
+
+  /* ============================================================ */
 
   function renderHome() {
     const allShops = getAllShops();
@@ -347,6 +382,7 @@ p { font-size: 13px; color: var(--text-light); }
     } catch (e) { console.error(e); toast("Failed to cancel"); }
   }
 
+  /* ---------- LIVE TRACKING (with new call / WhatsApp buttons) ---------- */
   function openTracking(orderId) {
     const o = state.orders.find(x => x.id === orderId); if (!o) return;
     if (o.status === "Cancelled") return toast("Order was cancelled");
@@ -380,8 +416,25 @@ p { font-size: 13px; color: var(--text-light); }
         const data = snap.data();
         const localOrder = state.orders.find(x => x.id === order.id);
         if (localOrder) { localOrder.status = data.status || localOrder.status; localOrder.rider = data.rider || localOrder.rider; saveLocal(); }
+
+        // 🔥 Rider contact box with call + WhatsApp
         const riderBox = document.getElementById("riderInfoBox");
-        if (riderBox && data.rider) { riderBox.innerHTML = `<div style="background:#f0fdf4;border-radius:14px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;"><div><b>${data.rider.name}</b><br><span style="font-size:12px;color:var(--text-light)">${data.rider.bike || 'Motorcycle'}</span></div><div style="display:flex;gap:8px;"><button class="add-btn" style="background:var(--success)" onclick="toast('Calling rider...')">📞</button><button class="add-btn" style="background:var(--primary)" onclick="openChat('${order.id}')">💬</button></div></div>`; }
+        if (riderBox && data.rider && data.rider.phone) {
+          const rPhone = data.rider.phone;
+          const rName = (data.rider.name || "Rider").replace(/'/g, "\\'");
+          riderBox.innerHTML = `
+            <div class="rider-contact-box">
+              <div class="info">
+                <b>🛵 ${data.rider.name || 'Rider'}</b>
+                <span>${data.rider.bike || 'Motorcycle'} • ⭐ ${data.rider.rating || '5.0'}</span>
+              </div>
+              <div class="actions">
+                <button class="icon-action call" onclick="callRider('${rPhone}')" title="Call">📞</button>
+                <button class="icon-action wa" onclick="openRiderWhatsApp('${rPhone}', '${rName}')" title="WhatsApp">💬</button>
+              </div>
+            </div>`;
+        }
+
         const timelineBox = document.getElementById("timelineBox");
         if (timelineBox) {
           const steps = ["Placed", "Accepted by Store", "Ready for Pickup", "Rider Assigned", "Picked Up", "On the Way", "Delivered"];
@@ -400,9 +453,6 @@ p { font-size: 13px; color: var(--text-light); }
   }
 
   function closeTracking() { if (riderLocationListener) { riderLocationListener(); riderLocationListener = null; } if (orderStatusListener) { orderStatusListener(); orderStatusListener = null; } liveMap = null; liveRiderMarker = null; liveCustomerMarker = null; closeModal(); }
-
-  function openChat(orderId) { document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet" style="height:80vh;display:flex;flex-direction:column;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;"><h3 style="margin:0;">Chat</h3><button class="add-btn" style="background:#f1f5f9;color:var(--text)" onclick="closeModal()">✕</button></div><div class="chat-box" id="chatBox"><div class="chat-msg other">Hello! On my way.</div></div><div class="chat-input"><input type="text" id="chatInput" placeholder="Message..." onkeypress="if(event.key==='Enter')sendChat()" /><button onclick="sendChat()">Send</button></div></div></div>`; }
-  function sendChat() { const inp = document.getElementById('chatInput'); const val = inp.value.trim(); if(!val) return; const cb = document.getElementById('chatBox'); cb.innerHTML += `<div class="chat-msg me">${val}</div>`; inp.value = ''; cb.scrollTop = cb.scrollHeight; setTimeout(() => { cb.innerHTML += `<div class="chat-msg other">OK!</div>`; cb.scrollTop = cb.scrollHeight; }, 1000); }
 
   function openRating(orderId) { document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Rate</h3><div style="text-align:center;margin-bottom:16px;"><b>Store</b></div><div class="stars" id="storeStars">${[1,2,3,4,5].map(i => `<span class="star" onclick="setStar('store',${i})">★</span>`).join("")}</div><div style="text-align:center;margin-bottom:16px;"><b>Rider</b></div><div class="stars" id="riderStars">${[1,2,3,4,5].map(i => `<span class="star" onclick="setStar('rider',${i})">★</span>`).join("")}</div><textarea placeholder="Review..." rows="3" style="width:100%;padding:14px;border:1px solid var(--border);border-radius:12px;margin-bottom:16px;"></textarea><button class="checkout-btn" style="background:var(--accent);" onclick="submitRating()">Submit</button></div></div>`; window._storeRating = 0; window._riderRating = 0; }
   function setStar(type, val) { if (type === 'store') { window._storeRating = val; document.querySelectorAll('#storeStars .star').forEach((s, i) => s.classList.toggle('active', i < val)); } else { window._riderRating = val; document.querySelectorAll('#riderStars .star').forEach((s, i) => s.classList.toggle('active', i < val)); } }
@@ -440,20 +490,23 @@ p { font-size: 13px; color: var(--text-light); }
 
   function logout() { if (!confirm("Logout?")) return; state.user = null; state.cart = []; state.orders = []; state.favorites = []; state.address = { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.coupon = null; localStorage.clear(); state.tab = "home"; render(); toast("Logged out"); }
 
+  /* ---------- ORDERS (with WhatsApp chat button) ---------- */
   function renderOrders() {
     if (!state.orders.length) return '<div class="empty"><span class="big">📦</span>No orders yet</div>';
     return `<h2>My Orders</h2>${state.orders.map(o => {
       const canCancel = ["Placed", "Accepted by Store", "Ready for Pickup"].includes(o.status);
       const isCancelled = ["Cancelled", "Rejected"].includes(o.status);
       const isDelivered = o.status === "Delivered";
+      const hasRider = o.rider && o.rider.phone;
       return `<div class="card" style="${isCancelled ? 'opacity:0.7;' : ''}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>#${o.id}</b><span class="status-chip ${o.status==='Placed'?'pending':''} ${isDelivered?'delivered':''} ${o.status==='Rider Assigned'?'assigned':''} ${isCancelled?'cancelled':''}">${o.status}</span></div>
         <p style="font-size:12px;color:var(--text-light);margin-bottom:8px">${new Date(o.createdAt).toLocaleString()}</p>
         ${o.items.map(i => `<div style="font-size:13px;display:flex;justify-content:space-between;padding:3px 0"><span>${i.name} × ${i.qty}</span><span>Rs ${i.price*i.qty}</span></div>`).join("")}
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;font-size:13px;"><div style="display:flex;justify-content:space-between;font-weight:bold;"><span>Total</span><span>Rs ${o.total}</span></div></div>
+        ${hasRider ? `<div style="margin-top:8px;font-size:12px;color:var(--success);font-weight:600;">🛵 Rider: ${o.rider.name}</div>` : ''}
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
           ${!isCancelled ? `<button class="add-btn" style="flex:1;background:var(--primary);" onclick="openTracking('${o.id}')">📍 Track</button>` : ''}
-          ${!isCancelled && !isDelivered ? `<button class="add-btn" style="flex:1;background:var(--success);" onclick="openChat('${o.id}')">💬 Chat</button>` : ''}
+          ${!isCancelled && !isDelivered && hasRider ? `<button class="add-btn" style="flex:1;background:#25D366;color:#fff;" onclick="contactRiderFromOrder('${o.id}')">💬 WhatsApp</button>` : ''}
           ${isDelivered ? `<button class="add-btn" style="flex:1;background:var(--accent);" onclick="openRating('${o.id}')">⭐ Rate</button>` : ''}
           <button class="add-btn" style="flex:1;background:#f1f5f9;color:var(--text);" onclick="reorder('${o.id}')">🔄 Reorder</button>
         </div>
@@ -494,7 +547,9 @@ p { font-size: 13px; color: var(--text-light); }
   loadSettings();
   setTimeout(loadMerchants, 500);
 
-  window.setCategory = setCategory; window.openShop = openShop; window.backToHome = backToHome; window.addToCart = addToCart; window.changeQty = changeQty; window.toggleFav = toggleFav; window.openProduct = openProduct; window.openCheckout = openCheckout; window.updateMode = updateMode; window.updatePay = updatePay; window.placeOrder = placeOrder; window.openTracking = openTracking; window.closeTracking = closeTracking; window.openChat = openChat; window.sendChat = sendChat; window.openRating = openRating; window.setStar = setStar; window.submitRating = submitRating; window.openLocationModal = openLocationModal; window.setAddressLabel = setAddressLabel; window.saveAddress = saveAddress; window.openAuth = openAuth; window.checkAndLogin = checkAndLogin; window.backToStep1 = backToStep1; window.completeSignup = completeSignup; window.logout = logout; window.reorder = reorder; window.closeModal = closeModal; window.toast = toast; window.applyCoupon = applyCoupon; window.cancelOrder = cancelOrder; window.goToMyLocation = goToMyLocation;
+  window.setCategory = setCategory; window.openShop = openShop; window.backToHome = backToHome; window.addToCart = addToCart; window.changeQty = changeQty; window.toggleFav = toggleFav; window.openProduct = openProduct; window.openCheckout = openCheckout; window.updateMode = updateMode; window.updatePay = updatePay; window.placeOrder = placeOrder; window.openTracking = openTracking; window.closeTracking = closeTracking; window.openRating = openRating; window.setStar = setStar; window.submitRating = submitRating; window.openLocationModal = openLocationModal; window.setAddressLabel = setAddressLabel; window.saveAddress = saveAddress; window.openAuth = openAuth; window.checkAndLogin = checkAndLogin; window.backToStep1 = backToStep1; window.completeSignup = completeSignup; window.logout = logout; window.reorder = reorder; window.closeModal = closeModal; window.toast = toast; window.applyCoupon = applyCoupon; window.cancelOrder = cancelOrder; window.goToMyLocation = goToMyLocation;
+  // NEW
+  window.openRiderWhatsApp = openRiderWhatsApp; window.callRider = callRider; window.contactRiderFromOrder = contactRiderFromOrder;
 </script>
 </body>
 </html>
