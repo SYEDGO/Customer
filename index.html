@@ -124,7 +124,7 @@ p { font-size: 13px; color: var(--text-light); }
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-analytics.js";
-  import { getFirestore, doc, setDoc, getDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, deleteDoc, onSnapshot, updateDoc, collection } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 
   const firebaseConfig = { apiKey: "AIzaSyDGykbkZ4ITxkEgcxaQNZlH9rFO86c-xEU", authDomain: "syedgo-2027.firebaseapp.com", projectId: "syedgo-2027", storageBucket: "syedgo-2027.firebasestorage.app", messagingSenderId: "827702342584", appId: "1:827702342584:web:a3d717e8b1bcf93529954d", measurementId: "G-L0B1K6N1EY" };
   const app = initializeApp(firebaseConfig);
@@ -209,6 +209,49 @@ p { font-size: 13px; color: var(--text-light); }
         if (state.tab === "home") render();
       }
     }, (err) => { console.error("Settings error:", err); });
+  }
+
+  // ============================================
+  // FCM PUSH NOTIFICATION SETUP
+  // ============================================
+  async function requestFcmToken() {
+    if (!window.FcmBridge) {
+      console.log('FCM: Not running inside SwatGo native app');
+      return;
+    }
+    console.log('FCM: Requesting token from native app...');
+    window.onFcmTokenReceived = async function(token) {
+      if (!token) { console.log('FCM: Token not available'); return; }
+      console.log('FCM: Got token:', token);
+      localStorage.setItem('swatgo_fcm_token', token);
+      await saveFcmTokenToFirestore(token);
+    };
+    window.FcmBridge.postMessage('getFcmToken');
+  }
+
+  async function saveFcmTokenToFirestore(token) {
+    if (!state.user) { console.log('FCM: No user logged in, skip save'); return; }
+    try {
+      const phoneKey = state.user.phone.replace(/[^0-9]/g, '');
+      await setDoc(doc(db, 'device_tokens', 'customer_' + phoneKey), {
+        token: token,
+        userType: 'customer',
+        userId: state.user.phone,
+        userName: state.user.name,
+        updatedAt: new Date().toISOString(),
+        platform: 'android'
+      }, { merge: true });
+      console.log('FCM: Token saved to Firestore ✅');
+    } catch (e) { console.error('FCM: Save failed:', e); }
+  }
+
+  async function removeFcmToken() {
+    if (!state.user) return;
+    try {
+      const phoneKey = state.user.phone.replace(/[^0-9]/g, '');
+      await deleteDoc(doc(db, 'device_tokens', 'customer_' + phoneKey));
+      console.log('FCM: Token removed from Firestore');
+    } catch (e) { console.error('FCM: Remove failed:', e); }
   }
 
   async function saveToFirebase() {
@@ -456,16 +499,25 @@ p { font-size: 13px; color: var(--text-light); }
     window._phone = phone; toast("Checking...");
     try {
       const snap = await getDoc(doc(db, "users", phone));
-      if (snap.exists()) { const data = snap.data(); state.user = data.user || { name: "SwatGo User", phone }; state.cart = data.cart || []; state.orders = data.orders || []; state.address = data.address || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.favorites = data.favorites || []; state.location = data.location || "Swat, Pakistan"; saveLocal(); closeModal(); render(); toast("Welcome back, " + state.user.name + "! 🎉"); }
+      if (snap.exists()) { const data = snap.data(); state.user = data.user || { name: "SwatGo User", phone }; state.cart = data.cart || []; state.orders = data.orders || []; state.address = data.address || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.favorites = data.favorites || []; state.location = data.location || "Swat, Pakistan"; saveLocal(); closeModal(); render(); toast("Welcome back, " + state.user.name + "! 🎉"); 
+        // ⬇️ FCM: register this device for push notifications
+        requestFcmToken();
+      }
       else { document.getElementById('authStep1').classList.add('hidden'); document.getElementById('authStep2').classList.remove('hidden'); }
     } catch (e) { console.error(e); toast("Network error"); }
   }
 
   function backToStep1() { document.getElementById('authStep2').classList.add('hidden'); document.getElementById('authStep1').classList.remove('hidden'); }
 
-  async function completeSignup() { const name = document.getElementById('aName').value.trim(); const email = document.getElementById('aEmail').value.trim(); if (!name) return toast("Enter name"); state.user = { name, phone: window._phone, email, createdAt: new Date().toISOString() }; saveLocal(); await saveToFirebase(); closeModal(); render(); toast("Welcome, " + name + " 🎉"); }
+  async function completeSignup() { const name = document.getElementById('aName').value.trim(); const email = document.getElementById('aEmail').value.trim(); if (!name) return toast("Enter name"); state.user = { name, phone: window._phone, email, createdAt: new Date().toISOString() }; saveLocal(); await saveToFirebase(); closeModal(); render(); toast("Welcome, " + name + " 🎉"); 
+    // ⬇️ FCM: register this device for push notifications
+    requestFcmToken();
+  }
 
-  function logout() { if (!confirm("Logout?")) return; state.user = null; state.cart = []; state.orders = []; state.favorites = []; state.address = { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.coupon = null; localStorage.clear(); state.tab = "home"; render(); toast("Logged out"); }
+  async function logout() { if (!confirm("Logout?")) return; 
+    // ⬇️ FCM: remove device token before clearing user
+    await removeFcmToken();
+    state.user = null; state.cart = []; state.orders = []; state.favorites = []; state.address = { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.coupon = null; localStorage.clear(); state.tab = "home"; render(); toast("Logged out"); }
 
   function renderOrders() {
     if (!state.orders.length) return '<div class="empty"><span class="big">📦</span>No orders yet</div>';
@@ -522,6 +574,9 @@ p { font-size: 13px; color: var(--text-light); }
   updateBadge(); render();
   loadSettings();
   setTimeout(loadMerchants, 500);
+
+  // ⬇️ FCM: register device on app launch if already logged in
+  if (state.user) requestFcmToken();
 
   window.setCategory = setCategory; window.openShop = openShop; window.backToHome = backToHome; window.addToCart = addToCart; window.changeQty = changeQty; window.toggleFav = toggleFav; window.openProduct = openProduct; window.openCheckout = openCheckout; window.updateMode = updateMode; window.updatePay = updatePay; window.placeOrder = placeOrder; window.openTracking = openTracking; window.closeTracking = closeTracking; window.openRating = openRating; window.setStar = setStar; window.submitRating = submitRating; window.openLocationModal = openLocationModal; window.setAddressLabel = setAddressLabel; window.saveAddress = saveAddress; window.openAuth = openAuth; window.checkAndLogin = checkAndLogin; window.backToStep1 = backToStep1; window.completeSignup = completeSignup; window.logout = logout; window.reorder = reorder; window.closeModal = closeModal; window.toast = toast; window.applyCoupon = applyCoupon; window.cancelOrder = cancelOrder; window.goToMyLocation = goToMyLocation;
   window.openRiderWhatsApp = openRiderWhatsApp; window.callRider = callRider; window.contactRiderFromOrder = contactRiderFromOrder;
