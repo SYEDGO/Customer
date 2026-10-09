@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#0f172a" />
-<title>SYEDGO</title>
+<title>SwatGo</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDLf8FDyUoWTFsiMu20azhnscWkiyCDE24&libraries=places"></script>
 <style>
@@ -89,8 +89,6 @@ p { font-size: 13px; color: var(--text-light); }
 .status-chip.assigned { background: #dbeafe; color: #1e40af; }
 .status-chip.cancelled { background: #fee2e2; color: #991b1b; }
 .checkout-btn { width: 100%; background: var(--success); color: #fff; border: none; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; margin-top: 16px; cursor: pointer; }
-
-/* Rider contact row inside track view */
 .rider-contact-box { background: #f0fdf4; border-radius: 14px; padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .rider-contact-box .info { flex: 1; min-width: 0; }
 .rider-contact-box .info b { display: block; font-size: 14px; margin-bottom: 2px; }
@@ -102,12 +100,12 @@ p { font-size: 13px; color: var(--text-light); }
 </style>
 </head>
 <body>
-<div id="splash"><h1>SYEDGO</h1><p>Delivering happiness to Swat</p><div class="loader"></div></div>
+<div id="splash"><h1>SwatGo</h1><p>Delivering happiness to Swat</p><div class="loader"></div></div>
 <div class="app">
   <header class="topbar">
     <div>
       <div class="loc" onclick="openLocationModal()">📍 <span id="locLabel">Swat, Pakistan</span></div>
-      <h1>SYEDGO</h1>
+      <h1>SwatGo</h1>
     </div>
     <button class="icon-btn" onclick="toast('No new notifications')">🔔</button>
   </header>
@@ -152,7 +150,7 @@ p { font-size: 13px; color: var(--text-light); }
   };
 
   const CATEGORIES = [ { key: "all", label: "All", em: "🏪" }, { key: "Restaurant", label: "Food", em: "🍔" }, { key: "Supermarket", label: "Grocery", em: "🛒" }, { key: "Pharmacy", label: "Pharmacy", em: "💊" }, { key: "Fruits & Veg", label: "Fruits", em: "🍎" } ];
-  const COUPONS = { "SYED10": { type: "percent", value: 10, min: 500 }, "WELCOME50": { type: "flat", value: 50, min: 300 }, "FREESHIP": { type: "shipping", value: 0, min: 0 } };
+  const COUPONS = { "SWAT10": { type: "percent", value: 10, min: 500 }, "WELCOME50": { type: "flat", value: 50, min: 300 }, "FREESHIP": { type: "shipping", value: 0, min: 0 } };
 
   let state = {
     tab: "home", category: "all", searchQuery: "", searchFilter: "all", currentShop: null, currentProduct: null,
@@ -246,43 +244,26 @@ p { font-size: 13px; color: var(--text-light); }
   function openShop(id) { state.currentShop = id; render(); window.scrollTo(0,0); }
   function backToHome() { state.currentShop = null; state.currentProduct = null; render(); }
 
-  /* ============================================================
-     📞 CONTACT RIDER — WhatsApp + Phone dialer
-     ============================================================ */
-
-  // Normalize phone: "+92 300 1234567" → "923001234567"
-  function normalizePhoneForLink(phone) {
-    if (!phone) return "";
-    return String(phone).replace(/[^0-9]/g, "");
-  }
-
-  // Open WhatsApp chat with rider
+  function normalizePhoneForLink(phone) { if (!phone) return ""; return String(phone).replace(/[^0-9]/g, ""); }
   function openRiderWhatsApp(riderPhone, riderName) {
     if (!riderPhone) return toast("Rider phone not available");
     const cleaned = normalizePhoneForLink(riderPhone);
     if (!cleaned) return toast("Invalid rider phone");
-    const msg = encodeURIComponent(`Assalam o Alaikum ${riderName || 'Rider'}, this is your customer from SYEDGO.`);
-    // wa.me works on both web and app
+    const msg = encodeURIComponent(`Assalam o Alaikum ${riderName || 'Rider'}, this is your customer from SwatGo.`);
     window.open(`https://wa.me/${cleaned}?text=${msg}`, "_blank");
   }
-
-  // Open phone dialer with rider
   function callRider(riderPhone) {
     if (!riderPhone) return toast("Rider phone not available");
     const cleaned = normalizePhoneForLink(riderPhone);
     if (!cleaned) return toast("Invalid rider phone");
     window.location.href = `tel:+${cleaned}`;
   }
-
-  // Contact rider from Orders tab (only WhatsApp, since call goes in Track)
   function contactRiderFromOrder(orderId) {
     const o = state.orders.find(x => x.id === orderId);
     if (!o) return;
     if (!o.rider || !o.rider.phone) return toast("Rider not assigned yet");
     openRiderWhatsApp(o.rider.phone, o.rider.name);
   }
-
-  /* ============================================================ */
 
   function renderHome() {
     const allShops = getAllShops();
@@ -363,7 +344,7 @@ p { font-size: 13px; color: var(--text-light); }
   async function placeOrder() {
     const mode = window._mode, pay = window._pay;
     const sub = cartSubtotal(), df = mode === "delivery" ? deliveryFee() : 0, pf = platformFee(), disc = discountAmount(), total = Math.max(0, sub + df + pf - disc);
-    const orderId = "SY" + Date.now().toString().slice(-6);
+    const orderId = "SW" + Date.now().toString().slice(-6);
     const order = { id: orderId, userId: state.user.phone, userName: state.user.name, userPhone: state.user.phone, items: [...state.cart], subtotal: sub, delivery: df, platformFee: pf, discount: disc, total: total, mode, pay, address: state.address, status: "Placed", createdAt: new Date().toISOString(), rider: null, riderEarning: 0, timeline: ["Placed"] };
     state.orders.unshift(order); state.cart = []; state.coupon = null;
     save(); updateBadge(); closeModal(); state.tab = "orders"; render();
@@ -382,7 +363,6 @@ p { font-size: 13px; color: var(--text-light); }
     } catch (e) { console.error(e); toast("Failed to cancel"); }
   }
 
-  /* ---------- LIVE TRACKING (with new call / WhatsApp buttons) ---------- */
   function openTracking(orderId) {
     const o = state.orders.find(x => x.id === orderId); if (!o) return;
     if (o.status === "Cancelled") return toast("Order was cancelled");
@@ -416,8 +396,6 @@ p { font-size: 13px; color: var(--text-light); }
         const data = snap.data();
         const localOrder = state.orders.find(x => x.id === order.id);
         if (localOrder) { localOrder.status = data.status || localOrder.status; localOrder.rider = data.rider || localOrder.rider; saveLocal(); }
-
-        // 🔥 Rider contact box with call + WhatsApp
         const riderBox = document.getElementById("riderInfoBox");
         if (riderBox && data.rider && data.rider.phone) {
           const rPhone = data.rider.phone;
@@ -434,7 +412,6 @@ p { font-size: 13px; color: var(--text-light); }
               </div>
             </div>`;
         }
-
         const timelineBox = document.getElementById("timelineBox");
         if (timelineBox) {
           const steps = ["Placed", "Accepted by Store", "Ready for Pickup", "Rider Assigned", "Picked Up", "On the Way", "Delivered"];
@@ -470,7 +447,7 @@ p { font-size: 13px; color: var(--text-light); }
   function setAddressLabel(label) { state.address.label = label; openLocationModal(); }
   function saveAddress() { const details = document.getElementById('addrDetails').value.trim(); const instructions = document.getElementById('addrInstructions').value.trim(); if (!details || details === "Fetching...") return toast("Set a valid address"); state.address.details = details; state.address.instructions = instructions; save(); closeModal(); toast("Saved ✅"); render(); }
 
-  function openAuth() { document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Login to SYEDGO</h3><div id="authStep1"><p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Enter your phone number.</p><input id="aPhone" placeholder="+92 300 1234567" type="tel" /><button class="checkout-btn" style="background:var(--primary);" onclick="checkAndLogin()">Continue</button></div><div id="authStep2" class="hidden"><p style="text-align:center;margin-bottom:16px;">👋 Welcome!</p><input id="aName" placeholder="Full Name" /><input id="aEmail" placeholder="Email (optional)" type="email" /><button class="checkout-btn" style="background:var(--success);" onclick="completeSignup()">Create Account</button><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="backToStep1()">← Change</button></div><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button></div></div>`; setTimeout(() => document.getElementById('aPhone')?.focus(), 100); }
+  function openAuth() { document.getElementById("modalRoot").innerHTML = `<div class="overlay" onclick="if(event.target===this)closeModal()"><div class="sheet"><h3>Login to SwatGo</h3><div id="authStep1"><p style="font-size:13px;color:var(--text-light);margin-bottom:12px;">Enter your phone number.</p><input id="aPhone" placeholder="+92 300 1234567" type="tel" /><button class="checkout-btn" style="background:var(--primary);" onclick="checkAndLogin()">Continue</button></div><div id="authStep2" class="hidden"><p style="text-align:center;margin-bottom:16px;">👋 Welcome!</p><input id="aName" placeholder="Full Name" /><input id="aEmail" placeholder="Email (optional)" type="email" /><button class="checkout-btn" style="background:var(--success);" onclick="completeSignup()">Create Account</button><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="backToStep1()">← Change</button></div><button class="add-btn" style="width:100%;margin-top:10px;background:#f1f5f9;color:var(--text)" onclick="closeModal()">Cancel</button></div></div>`; setTimeout(() => document.getElementById('aPhone')?.focus(), 100); }
 
   async function checkAndLogin() {
     const input = document.getElementById('aPhone').value.trim(); if (!input) return toast("Enter phone");
@@ -479,7 +456,7 @@ p { font-size: 13px; color: var(--text-light); }
     window._phone = phone; toast("Checking...");
     try {
       const snap = await getDoc(doc(db, "users", phone));
-      if (snap.exists()) { const data = snap.data(); state.user = data.user || { name: "SYEDGO User", phone }; state.cart = data.cart || []; state.orders = data.orders || []; state.address = data.address || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.favorites = data.favorites || []; state.location = data.location || "Swat, Pakistan"; saveLocal(); closeModal(); render(); toast("Welcome back, " + state.user.name + "! 🎉"); }
+      if (snap.exists()) { const data = snap.data(); state.user = data.user || { name: "SwatGo User", phone }; state.cart = data.cart || []; state.orders = data.orders || []; state.address = data.address || { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.favorites = data.favorites || []; state.location = data.location || "Swat, Pakistan"; saveLocal(); closeModal(); render(); toast("Welcome back, " + state.user.name + "! 🎉"); }
       else { document.getElementById('authStep1').classList.add('hidden'); document.getElementById('authStep2').classList.remove('hidden'); }
     } catch (e) { console.error(e); toast("Network error"); }
   }
@@ -490,7 +467,6 @@ p { font-size: 13px; color: var(--text-light); }
 
   function logout() { if (!confirm("Logout?")) return; state.user = null; state.cart = []; state.orders = []; state.favorites = []; state.address = { label: "Home", details: "", instructions: "", lat: DEFAULT_CENTER.lat, lng: DEFAULT_CENTER.lng }; state.coupon = null; localStorage.clear(); state.tab = "home"; render(); toast("Logged out"); }
 
-  /* ---------- ORDERS (with WhatsApp chat button) ---------- */
   function renderOrders() {
     if (!state.orders.length) return '<div class="empty"><span class="big">📦</span>No orders yet</div>';
     return `<h2>My Orders</h2>${state.orders.map(o => {
@@ -518,7 +494,7 @@ p { font-size: 13px; color: var(--text-light); }
   function reorder(orderId) { const o = state.orders.find(x => x.id === orderId); if(!o) return; o.items.forEach(item => { const ex = state.cart.find(i => String(i.id) === String(item.id)); if(ex) ex.qty += item.qty; else state.cart.push({...item}); }); save(); updateBadge(); toast("Added to cart!"); state.tab = "cart"; render(); }
 
   function renderProfile() {
-    if (!state.user) return `<div class="card" style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">👤</div><h3 style="margin-bottom:8px;">Welcome to SYEDGO</h3><p style="color:var(--text-light);font-size:13px;margin-bottom:20px;">Login with your phone</p><button class="checkout-btn" style="background:var(--primary);" onclick="openAuth()">Login / Signup</button></div>`;
+    if (!state.user) return `<div class="card" style="text-align:center;padding:40px 20px;"><div style="font-size:64px;margin-bottom:16px;">👤</div><h3 style="margin-bottom:8px;">Welcome to SwatGo</h3><p style="color:var(--text-light);font-size:13px;margin-bottom:20px;">Login with your phone</p><button class="checkout-btn" style="background:var(--primary);" onclick="openAuth()">Login / Signup</button></div>`;
     return `<div class="card"><div style="display:flex;align-items:center;gap:16px"><div style="width:60px;height:60px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;">👤</div><div><h3>${state.user.name}</h3><p style="font-size:13px;color:var(--text-light)">${state.user.phone}</p></div></div></div>
     <div class="card"><div style="display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;" onclick="openLocationModal()"><span>📍 Address</span><span style="color:var(--text-light);font-size:12px">${state.address.details ? state.address.details.slice(0,20)+'...' : 'Not set'}</span></div><div style="display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;cursor:pointer;" onclick="state.tab='orders';render()"><span>📦 My Orders</span><span>›</span></div><div style="display:flex;justify-content:space-between;padding:14px 0;font-size:14px;cursor:pointer;" onclick="toast('Support ticket created')"><span>🎧 Help & Support</span><span>›</span></div></div>
     <button class="checkout-btn" style="background:var(--danger)" onclick="logout()">Logout</button>`;
@@ -539,7 +515,7 @@ p { font-size: 13px; color: var(--text-light); }
 
   document.querySelectorAll(".bottom-nav button").forEach(btn => { btn.addEventListener("click", () => { state.tab = btn.dataset.tab; state.currentShop = null; render(); window.scrollTo(0, 0); }); });
 
-  function applyCoupon() { const code = prompt("Enter coupon:\nSYED10, WELCOME50, FREESHIP"); if (!code) return; const c = code.trim().toUpperCase(); if (COUPONS[c]) { state.coupon = c; save(); render(); toast("Applied: " + c); } else toast("Invalid coupon"); }
+  function applyCoupon() { const code = prompt("Enter coupon:\nSWAT10, WELCOME50, FREESHIP"); if (!code) return; const c = code.trim().toUpperCase(); if (COUPONS[c]) { state.coupon = c; save(); render(); toast("Applied: " + c); } else toast("Invalid coupon"); }
 
   setTimeout(() => { document.getElementById('splash').style.opacity = '0'; setTimeout(() => document.getElementById('splash')?.remove(), 500); }, 2000);
   document.getElementById("locLabel").textContent = state.location;
@@ -548,7 +524,6 @@ p { font-size: 13px; color: var(--text-light); }
   setTimeout(loadMerchants, 500);
 
   window.setCategory = setCategory; window.openShop = openShop; window.backToHome = backToHome; window.addToCart = addToCart; window.changeQty = changeQty; window.toggleFav = toggleFav; window.openProduct = openProduct; window.openCheckout = openCheckout; window.updateMode = updateMode; window.updatePay = updatePay; window.placeOrder = placeOrder; window.openTracking = openTracking; window.closeTracking = closeTracking; window.openRating = openRating; window.setStar = setStar; window.submitRating = submitRating; window.openLocationModal = openLocationModal; window.setAddressLabel = setAddressLabel; window.saveAddress = saveAddress; window.openAuth = openAuth; window.checkAndLogin = checkAndLogin; window.backToStep1 = backToStep1; window.completeSignup = completeSignup; window.logout = logout; window.reorder = reorder; window.closeModal = closeModal; window.toast = toast; window.applyCoupon = applyCoupon; window.cancelOrder = cancelOrder; window.goToMyLocation = goToMyLocation;
-  // NEW
   window.openRiderWhatsApp = openRiderWhatsApp; window.callRider = callRider; window.contactRiderFromOrder = contactRiderFromOrder;
 </script>
 </body>
